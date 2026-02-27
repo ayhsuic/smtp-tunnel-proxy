@@ -1,27 +1,26 @@
+# Use a slim Python image for a smaller footprint
 FROM python:3.11-slim
-
-# Install git and required dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Clone the repository
-RUN git clone https://github.com/x011/smtp-tunnel-proxy.git .
+# Install system dependencies (curl for health checks, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Python requirements
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Ensure management scripts are executable
-RUN chmod +x smtp-tunnel-*
+# Copy the rest of the application files
+COPY . .
 
-# Copy the generated startup script
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+# Ensure the start script is executable
+RUN chmod +x start.sh
 
-# Define a volume for persistent storage across Zeabur redeployments
-VOLUME ["/data"]
+# Expose the SMTP port
+EXPOSE 587
 
-# Entrypoint via startup script
-ENTRYPOINT ["/app/start.sh"]
+# Use the startup script to handle dynamic configuration
+CMD ["./start.sh"]
